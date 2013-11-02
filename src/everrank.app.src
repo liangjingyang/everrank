@@ -1,0 +1,15 @@
+
+{application, everrank, [
+	{description, "mobile game rank server."},
+	{vsn, "0.0.1"},
+	{modules, []},
+	{registered, [everrank_sup, everrank_server]},
+	{applications, [
+		kernel,
+		stdlib,
+		cowboy,
+		crypto
+	]},
+	{mod, {everrank_app, []}},
+	{env, []}
+]}.
