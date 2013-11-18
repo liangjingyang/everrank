@@ -7,9 +7,22 @@
 	{applications, [
 		kernel,
 		stdlib,
-		cowboy,
 		crypto
 	]},
-	{mod, {everrank_app, []}},
-	{env, []}
+
+	{mod, {everrank_app, [
+                  {acceptor_num, 100}, 
+                  {port, 8080}
+                  ]
+              }
+        },
+
+	{env, [
+            {port, 8080}, 
+            {master, true}, 
+            {master_ip, "127.0.0.1"}
+            {slave_id, 0},
+            {slave_num, 3}
+            ]
+        }
 ]}.
