@@ -98,7 +98,8 @@ set_master_nodes(Tab, MasterNodes) ->
     mnesia:set_master_nodes(Tab, MasterNodes).
 
 start() ->
-    mnesia:start().
+    mnesia:start(),
+    init().
 
 stop() ->
     mnesia:stop().
@@ -156,25 +157,25 @@ set_method() ->
     ok.
 
 db_tmp_src() ->
-    "-module(" ++ ?EVER_DB2 ++ ")." ++
-    "-compile(export_all)." ++
-    "dirty_read(Tab, Key) -> 
+    "-module(" ++ ?EVER_DB2 ++ ")
+    -compile(export_all).
+    dirty_read(Tab, Key) -> 
         case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
             Tab ->
                 Read = fun(T, K) -> mnesia:dirty_read(T, K) end,
                 mnesia:activity(async_dirty, Read, [Tab, Key], mnesia_frag);
             _ ->
                 mnesia:dirty_read(Tab, Key)
-        end." ++
-    "dirty_write(Tab, Record) ->
+        end.
+    dirty_write(Tab, Record) ->
         case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
             Tab ->
                 Write = fun(T, R) -> mnesia:dirty_write(T, R) end,
                 mnesia:activity(sync_dirty, Write, [Tab, Record], mnesia_frag);
             _ ->
                 mnesia:dirty_write(Tab, Record)
-        end."
-    .
+        end.
+    ".
 
 
 db_src() ->
@@ -192,25 +193,25 @@ db_src() ->
                     end
             end
     end, "", SchemaList),
-    "-module(" ++ ?EVER_DB2 ++ ")." ++
-    "-compile(export_all)." ++
-    "dirty_read(Tab, Key) -> 
+    "-module(" ++ ?EVER_DB2 ++ ").
+    -compile(export_all).
+    dirty_read(Tab, Key) -> 
          case lists:member(Tab, [" ++ FragTab ++ "]) of
              true ->
                 Read = fun(T, K) -> mnesia:dirty_read(T, K) end,
                 mnesia:activity(async_dirty, Read, [Tab, Key], mnesia_frag);
              false ->
                 mnesia:dirty_read(Tab, Key)
-         end." ++
-    "dirty_write(Tab, Record) ->
+         end.
+    dirty_write(Tab, Record) ->
          case lists:member(Tab, [" ++ FragTab ++ "]) of
              true ->
                 Write = fun(T, R) -> mnesia:dirty_write(T, R) end,
                 mnesia:activity(sync_dirty, Write, [Tab, Record], mnesia_frag);
              false ->
                 mnesia:dirty_write(Tab, Record)
-         end."
-    .
+         end.
+    ".
 
 do_frag(Tab) ->
     set_tmp_method(),

@@ -47,7 +47,8 @@ handle_cast(_Request, State) ->
     {noreply, State}.
     
 handle_info(Info, State) ->
-    ?DO_HANDLE_INFO(Info, State).
+    ?DO_HANDLE_INFO(Info, State),
+    {noreply, State}.
  
 terminate(_Reason, _State) ->
     ok.
@@ -83,12 +84,17 @@ init_master_db() ->
                         FDTab = everrank_lib:sns_to_friend_tab(P),
                         FWTab = everrank_lib:sns_to_follow_tab(P),
                         RNTab = everrank_lib:sns_to_relation_tab(P),
-                        [Tab, FDTab, FWTab, RNTab|Acc]
+                        [
+                            {Tab, [{record_name, t}, {attributes, record_info(fields, t)}]},
+                            {FDTab, [{record_name, t_fd}, {attributes, record_info(fields, t_fd)}]},
+                            {FWTab, [{record_name, t_fw}, {attributes, record_info(fields, t_fw)}]},
+                            {RNTab, [{record_name, t_rn}, {attributes, record_info(fields, t_rn)}]}
+                            | Acc
+                        ]
                 end, [], Platforms),
-            lists:foreach(fun(T) ->
-                        catch ever_db:create_table(T, [{disc_copies, [node()]}])
-                end, TabList),
-            ever_db:wait_for_tables(TabList, 1000);
+            lists:foreach(fun({T, TabDef}) ->
+                        catch ever_db:create_table(T, [{disc_copies, [node()]}|TabDef])
+                end, TabList);
         _ ->
             ignore
     end.

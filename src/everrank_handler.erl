@@ -22,6 +22,7 @@ handle(Req, State) ->
             do_handle_error(Req2, Reason, Type);
         _Else ->
             Req2 = Req,
+            io:format("error else: ~w~n", [_Else]),
             ignore
     end,
     {ok, Req2, State}.
@@ -38,6 +39,7 @@ abort(Req, Reason) ->
 do_handle_error(Req, Reason) ->
     do_handle_error(Req, Reason, 400).
 do_handle_error(Req, Reason, Type) ->
+    io:format("handle error, reason:~w~n", [Reason]),
     cowboy_req:reply(Type, [], Reason, Req).
 
 do_handle(Req, State) ->
@@ -53,35 +55,44 @@ do_handle_post(Req, State) ->
         true ->
             do_handle_body(Req, State);
         false ->
-            abort(Req, <<?RES_ERROR_BODY>>)
+            abort(Req, ?RES_ERROR_BODY)
     end.
 
 do_handle_body(Req, State) ->
-    {ok, PostVals, Req2} = cowboy_req:has_body(Req),
+    {ok, PostVals, Req2} = cowboy_req:body_qs(Req),
     case proplists:get_value(<<"content">>, PostVals) of
         undefined ->
             abort(Req2, ?RES_ERROR_CONTENT);
         Data ->
-            Data2 = do_handle_decrypt(Data),
-            Data3 = do_handle_decode(Data2),
+            Data2 = do_handle_decrypt(Data, Req2),
+            Data3 = do_handle_decode(Data2, Req2),
             do_handle_protocol(Data3, Req2, State)
     end.
 
-do_handle_decrypt(Data) ->
+do_handle_decrypt(Data, _Req) ->
     Data.
 
-do_handle_decode(Data) ->
-    jsx:decode(Data).
+do_handle_decode(Data, Req) ->
+    case jsx:is_json(Data) of
+        true ->
+            jsx:decode(Data);
+        false ->
+            abort(Req, ?RES_ERROR_JSON)
+    end.
 
-do_handle_protocol([?PROTOCOL_INIT, Data], Req, State) ->
+
+do_handle_protocol([{?PROTOCOL_INIT, Data}], Req, State) ->
     do_handle_init(Data, Req, State);
-do_handle_protocol([?PROTOCOL_UPDATE_FRIEND, Data], Req, State) ->
+do_handle_protocol([{?PROTOCOL_UPDATE_FRIEND, Data}], Req, State) ->
     do_handle_update_friend(Data, Req, State);
-do_handle_protocol([?PROTOCOL_UPDATE_USERDATA, Data], Req, State) ->
+do_handle_protocol([{?PROTOCOL_UPDATE_USERDATA, Data}], Req, State) ->
     do_handle_update_userdata(Data, Req, State);
-do_handle_protocol([?PROTOCOL_GET_FRIEND_USERDATA, Data], Req, State) ->
+do_handle_protocol([{?PROTOCOL_GET_USERDATA, Data}], Req, State) ->
+    do_handle_get_userdata(Data, Req, State);
+do_handle_protocol([{?PROTOCOL_GET_FRIEND_USERDATA, Data}], Req, State) ->
     do_handle_get_friend_userdata(Data, Req, State);
-do_handle_protocol(_, Req, _State) ->
+do_handle_protocol(_Protocol, Req, _State) ->
+    io:format("handle protocol error, data:~p~n", [_Protocol]),
     abort(Req, ?RES_ERROR_PROTOCOL).
 
 do_handle_init(Data, Req, _State) ->
@@ -114,20 +125,25 @@ check_init_field(Data, Req) ->
 do_handle_update_friend(Data, Req, _State) ->
     [SnsType, SnsId, Cmd, FSnsIdList] = check_update_friend_field(Data, Req),
     Tab = everrank_lib:sns_to_tab(SnsType),
-    FDTab = everrank_lib:sns_to_friend_tab(SnsType),
-    FWTab = everrank_lib:sns_to_follow_tab(SnsType),
-    RNTab = everrank_lib:sns_to_relation_tab(SnsType),
-    case Cmd of
-        ?CMD_ADD ->
-            [Inited, NotInited] = split_friends(FSnsIdList, Tab, [], []),
-            add_inited(Inited, SnsId, Tab, FDTab, FWTab),
-            add_notinited(NotInited, SnsId, RNTab),
-            add_relation(SnsId, FDTab, FWTab, RNTab),
-            reply(?RES_SUCC, Req);
-        ?CMD_DEL ->
-            del_fd(FSnsIdList, SnsId, FDTab),
-            del_rn_and_fw(FSnsIdList, SnsId, RNTab, FWTab),
-            reply(?RES_SUCC, Req)
+    case ever_db:dirty_read(Tab, SnsId) of
+        [] ->
+            ignore;
+        _ ->
+            FDTab = everrank_lib:sns_to_friend_tab(SnsType),
+            FWTab = everrank_lib:sns_to_follow_tab(SnsType),
+            RNTab = everrank_lib:sns_to_relation_tab(SnsType),
+            case Cmd of
+                ?CMD_ADD ->
+                    [Inited, NotInited] = split_friends(FSnsIdList, Tab, [], []),
+                    add_inited(Inited, SnsId, Tab, FDTab, FWTab),
+                    add_notinited(NotInited, SnsId, RNTab),
+                    add_relation(SnsId, FDTab, FWTab, RNTab),
+                    reply(?RES_SUCC, Req);
+                ?CMD_DEL ->
+                    del_fd(FSnsIdList, SnsId, FDTab),
+                    del_rn_and_fw(FSnsIdList, SnsId, RNTab, FWTab),
+                    reply(?RES_SUCC, Req)
+            end
     end.
 
 check_update_friend_field(Data, Req) ->
@@ -159,6 +175,22 @@ check_update_userdata(Data, Req) ->
     SnsId = check_field_snsid(Data, Req),
     UserData = check_field_userdata(Data, Req),
     [SnsType, SnsId, UserData].
+
+do_handle_get_userdata(Data, Req, _State) ->
+    [SnsType, SnsId] = check_get_userdata(Data, Req),
+    Tab = everrank_lib:sns_to_tab(SnsType),
+    case ever_db:dirty_read(Tab, SnsId) of
+        [] ->
+            ignore;
+        [#t{data = UserData}] ->
+            Res = jsx:encode([{SnsId, UserData}]),
+            reply(Res, Req)
+    end.
+
+check_get_userdata(Data, Req) ->
+    SnsType = check_field_snstype(Data, Req),
+    SnsId = check_field_snsid(Data, Req),
+    [SnsType, SnsId].
 
 do_handle_get_friend_userdata(Data, Req, _State) ->
     [SnsType, SnsId, Cmd] = check_get_friend_userdata(Data, Req),
@@ -262,22 +294,22 @@ del_fd2([], FDList) ->
     FDList.
 
 
-remove_dup_fd(FDList, SnsId, FDTab)->
-    case ever_db:dirty_read(FDTab, SnsId) of
-        [] ->
-            FDList;
-        [#t_fd{friendList = FDList2}] ->
-            remove_dup_fd2(FDList, FDList2, [])
-    end.
-remove_dup_fd2([FSnsId|FDList], FDList2, FDList3) ->
-    case lists:keymember(FSnsId, #t_fdl.snsId, FDList2) of
-        true ->
-            remove_dup_fd2(FDList, FDList2, FDList3);
-        false ->
-            remove_dup_fd2(FDList, FDList2, [FSnsId|FDList3])
-    end;
-remove_dup_fd2([], _FDList2, FDList3) ->
-    FDList3.
+%remove_dup_fd(FDList, SnsId, FDTab)->
+    %case ever_db:dirty_read(FDTab, SnsId) of
+        %[] ->
+            %FDList;
+        %[#t_fd{friendList = FDList2}] ->
+            %remove_dup_fd2(FDList, FDList2, [])
+    %end.
+%remove_dup_fd2([FSnsId|FDList], FDList2, FDList3) ->
+    %case lists:keymember(FSnsId, #t_fdl.snsId, FDList2) of
+        %true ->
+            %remove_dup_fd2(FDList, FDList2, FDList3);
+        %false ->
+            %remove_dup_fd2(FDList, FDList2, [FSnsId|FDList3])
+    %end;
+%remove_dup_fd2([], _FDList2, FDList3) ->
+    %FDList3.
             
 merge_snsid([SnsId|T], List) ->
     case lists:member(SnsId, List) of
@@ -293,7 +325,7 @@ add_relation(SnsId, FDTab, FWTab, RNTab) ->
     case ever_db:dirty_read(RNTab, SnsId) of
         [] ->
             ignore;
-        [#t_rn{relationList = RelationList} = RNRec] ->
+        [#t_rn{relationList = RelationList}] ->
             add_relation2(RelationList, SnsId, FDTab),
             case ever_db:dirty_read(FWTab, SnsId) of
                 [] ->
@@ -351,12 +383,13 @@ add_inited(Inited, SnsId, Tab, FDTab, FWTab) ->
     FriendList = add_inited2(Inited, SnsId, Tab, FWTab, []),
     [#t_fd{friendList = FriendList2} = FDRec] = ever_db:dirty_read(FDTab, SnsId),
     FriendList3 = merge_fdl(FriendList2, FriendList),
+    io:format("add_inited, I:~w, id:~w, f:~w, f2:~w, f3:~w~n", [Inited, SnsId, FriendList, FriendList2, FriendList3]),
     ever_db:dirty_write(FDTab, FDRec#t_fd{friendList = FriendList3}),
     ok.
 
 add_inited2([FSnsId|Inited], MSnsId, Tab, FWTab, FriendList) ->
     case ever_db:dirty_read(Tab, FSnsId) of
-        #t{data = Data} ->
+        [#t{data = Data}] ->
             Friend = #t_fdl{snsId = FSnsId, data = Data, update = true},
             FriendList2 = [Friend|FriendList];
         _ ->
@@ -364,7 +397,7 @@ add_inited2([FSnsId|Inited], MSnsId, Tab, FWTab, FriendList) ->
     end,
     %%TODO:transaction
     case ever_db:dirty_read(FWTab, FSnsId) of
-        #t_fw{followList = FollowList} = FWRec ->
+        [#t_fw{followList = FollowList} = FWRec] ->
             FollowList2 = [MSnsId|lists:delete(MSnsId, FollowList)],
             ever_db:dirty_write(FWTab, FWRec#t_fw{followList = FollowList2});
         _ ->
@@ -385,7 +418,7 @@ split_friends([], _Tab, Inited, NotInited) ->
     [Inited, NotInited].
 
 check_field_userdata(Data, Req) ->
-    case proplists:get_value(Data, ?FIELD_USERDATA) of
+    case proplists:get_value(?FIELD_USERDATA, Data) of
         undefined ->
             UserData = undefined,
             abort(Req, ?RES_ERROR_FIELD);
@@ -394,7 +427,7 @@ check_field_userdata(Data, Req) ->
     end,
     UserData.
 check_field_cmd(Data, Req, CmdList) ->
-    case proplists:get_value(Data, ?FIELD_CMD) of
+    case proplists:get_value(?FIELD_CMD, Data) of
         undefined ->
             Cmd = undeifned,
             abort(Req, ?RES_ERROR_FIELD);
@@ -408,7 +441,7 @@ check_field_cmd(Data, Req, CmdList) ->
     end,
     Cmd.
 check_field_friendlist(Data, Req) ->
-    case proplists:get_value(Data, ?FIELD_FRIENDLIST) of
+    case proplists:get_value(?FIELD_FRIENDLIST, Data) of
         FriendList when is_list(FriendList) ->
             ok;
         undefined ->
@@ -417,7 +450,7 @@ check_field_friendlist(Data, Req) ->
     end,
     FriendList.
 check_field_snsid(Data, Req) ->
-    case proplists:get_value(Data, ?FIELD_SNSID) of
+    case proplists:get_value(?FIELD_SNSID, Data) of
         undefined ->
             SnsId = undeifned,
             abort(Req, ?RES_ERROR_FIELD);
@@ -426,7 +459,7 @@ check_field_snsid(Data, Req) ->
     end,
     SnsId.
 check_field_snstype(Data, Req) ->
-    case proplists:get_value(Data, ?FIELD_SNSTYPE) of
+    case proplists:get_value(?FIELD_SNSTYPE, Data) of
         undefined ->
             SnsType = undeifned,
             abort(Req, ?RES_ERROR_FIELD);

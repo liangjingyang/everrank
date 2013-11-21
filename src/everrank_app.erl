@@ -23,12 +23,11 @@ start(_Type, Args) ->
     {ok, Sup} = everrank_sup:start_link(),
     case application:get_env(everrank, master) of
         {ok, true} ->
-            Res = supervisor:start_child(Sup, 
+            _Res = supervisor:start_child(Sup, 
                 {everrank_master, 
                     {everrank_server, start_link, [everrank_master]}, 
                     permanent, 2000, worker, [everrank_server]
-                }),
-            io:format("xxxxxxxxxxxxxxxxxxxxxxx~w~n", [Res]);
+                });
         _ ->
             case application:get_env(everrank, slave_id) of
                 N when is_integer(N) and N > 0 ->
