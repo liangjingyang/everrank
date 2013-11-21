@@ -12,7 +12,7 @@
 -record(state, {}).
 
 -define(ETS_EVERRANK, ets_everrank).
--define(TABLE_FRAG_SIZE, 50000).
+-define(TABLE_FRAG_SIZE, 10000).
 
 start_link(Name) ->
     gen_server:start_link({global, Name}, ?MODULE, [], []).
@@ -23,7 +23,7 @@ init([]) ->
     case application:get_env(everrank, master) of
         {ok, true} ->
             init_master_db(),
-            erlang:send_after(30*60*1000, self(), {frag, check_frag}),
+            erlang:send_after(30*1000, self(), {frag, check_frag}),
             ok;
         _ ->
             case application:get_env(everrank, master_ip) of
@@ -109,15 +109,19 @@ init_slave_db() ->
     ever_db:wait_for_tables(TabList, 5 * 1000).
     
 check_frag() ->
+    erlang:send_after(30*1000, self(), {frag, check_frag}),
     TabList = ever_db:system_info(tables),
-    lists:foreach(fun(T) ->
-                case ever_db:table_info(T, size) > ?TABLE_FRAG_SIZE of
-                    true ->
-                        catch ever_db:do_frag(T);
-                    false ->
-                        ignore
-                end
-        end, TabList).
+    check_frag2(TabList).
+check_frag2([Tab|List]) ->
+    case ever_db:table_info(Tab, size) > ?TABLE_FRAG_SIZE of
+        true ->
+            catch ever_db:do_frag(Tab);
+        false ->
+            check_frag2(List)
+    end;
+check_frag2([]) ->
+    ok.
+
 
 
 
