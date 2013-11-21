@@ -27,7 +27,8 @@ start(_Type, Args) ->
                 {everrank_master, 
                     {everrank_server, start_link, [everrank_master]}, 
                     permanent, 2000, worker, [everrank_server]
-                });
+                }),
+            io:format("res:~w~n", [_Res]);
         _ ->
             case application:get_env(everrank, slave_id) of
                 N when is_integer(N) and N > 0 ->
@@ -35,7 +36,7 @@ start(_Type, Args) ->
                     supervisor:start_child(Sup, 
                         {Name, 
                             {everrank_server, start_link, [Name]}, 
-                            permanent, 2000, work, [everrank_server]
+                            permanent, 2000, worker, [everrank_server]
                         });
                 _ ->
                     ignore

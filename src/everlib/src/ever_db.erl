@@ -98,8 +98,7 @@ set_master_nodes(Tab, MasterNodes) ->
     mnesia:set_master_nodes(Tab, MasterNodes).
 
 start() ->
-    mnesia:start(),
-    init().
+    mnesia:start().
 
 stop() ->
     mnesia:stop().
@@ -124,6 +123,10 @@ frag_dirty_write(Tab, Record) ->
 frag_info(Tab) ->
     Info = fun(T) -> mnesia:table_info(T, frag_properties) end,
     mnesia:activity(async_dirty, Info, [Tab], mnesia_frag).
+
+frag_info(Tab, Key) ->
+    Info = fun(T, K) -> mnesia:table_info(T, K) end,
+    mnesia:activity(async_dirty, Info, [Tab, Key], mnesia_frag).
 
 frag_size(Tab) ->
     Size = fun(T) -> mnesia:table_info(T, frag_size) end,
@@ -180,23 +183,24 @@ db_tmp_src() ->
 
 db_src() ->
     SchemaList = ets:tab2list(schema),
-    [_|FragTab] = lists:foldl(fun({schema, Name, List}, Acc)->
+    FragTab = lists:foldl(fun({schema, Name, List}, Acc)->
                 case proplists:get_value(frag_properties, List) of
                     undefined ->
                         Acc;
                     Properties ->
                         case proplists:get_value(base_table, Properties) of
                             Name ->
-                                Acc ++ "," ++ atom_to_list(Name);
+                                [atom_to_list(Name)|Acc];
                             _ ->
                                 Acc
-                    end
-            end
-    end, "", SchemaList),
+                        end
+                end
+        end, "", SchemaList),
+    FragTab2 = string:join(FragTab, ","),
     "-module(" ++ ?EVER_DB2 ++ ").
     -compile(export_all).
     dirty_read(Tab, Key) -> 
-         case lists:member(Tab, [" ++ FragTab ++ "]) of
+         case lists:member(Tab, [" ++ FragTab2 ++ "]) of
              true ->
                 Read = fun(T, K) -> mnesia:read(T, K) end,
                 mnesia:activity(async_dirty, Read, [Tab, Key], mnesia_frag);
@@ -204,7 +208,7 @@ db_src() ->
                 mnesia:dirty_read(Tab, Key)
          end.
     dirty_write(Tab, Record) ->
-         case lists:member(Tab, [" ++ FragTab ++ "]) of
+         case lists:member(Tab, [" ++ FragTab2 ++ "]) of
              true ->
                 Write = fun(T, R) -> mnesia:write(T, R, write) end,
                 mnesia:activity(sync_dirty, Write, [Tab, Record], mnesia_frag);
@@ -214,7 +218,6 @@ db_src() ->
     ".
 
 do_frag(Tab) ->
-    io:format("do_frag, tab: ~w~n", [Tab]),
     set_tmp_method(),
     case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
         undefined ->
