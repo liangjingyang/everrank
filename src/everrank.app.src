@@ -11,18 +11,18 @@
 	]},
 
 	{mod, {everrank_app, [
-                  {acceptor_num, 100}, 
-                  {port, 8080}
+                  {acceptor_num, 100},                          %% acceptor的数量
+                  {port, 8080}                                  %% 本节点的监听端口
                   ]
               }
         },
 
 	{env, [
-            {port, 8080}, 
-            {master, true}, 
-            {master_ip, "127.0.0.1"}
-            {slave_id, 0},
-            {slave_num, 3}
+            {master, true},                                     %% 是否是master节点
+            {master_ip, "127.0.0.1"},                           %% master节点的ip
+            {slave_id, 0},                                      %% master的slave_id是0，其他slave的>0
+            {slave_num, 3},                                     %% 一共有几个slave节点，不算master
+            {platforms, ["sw", "tw", "rr"]}                     %% 支持的社交平台，sw=新浪微博，tw=腾讯微博，rr=人人网
             ]
         }
 ]}.

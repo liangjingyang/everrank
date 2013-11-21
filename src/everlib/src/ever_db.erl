@@ -35,6 +35,9 @@ change_table_load_order(Tab, LoadOrder) ->
 clear_table(Tab) ->
     mnesia:clear_table(Tab).
 
+create_schema(NodeList) ->
+    mnesia:create_schema(NodeList).
+
 create_table(Name, TabDef) ->
     mnesia:create_table(Name, TabDef).
 
@@ -94,6 +97,15 @@ set_master_nodes(MasterNodes) ->
 set_master_nodes(Tab, MasterNodes) ->
     mnesia:set_master_nodes(Tab, MasterNodes).
 
+start() ->
+    mnesia:start().
+
+stop() ->
+    mnesia:stop().
+
+system_info(Key) ->
+    mnesia:system_info(Key).
+
 table_info(Tab, InfoKey) ->
     mnesia:table_info(Tab, InfoKey).
 
@@ -123,8 +135,8 @@ frag_dist(Tab) ->
 activate_frag(Tab) ->
     mnesia:change_table_frag(Tab, {activate, []}).
 
-add_frag(Tab) ->
-    mnesia:change_table_frag(Tab, {add_frag, [{node()}]}).
+add_frag(Tab, FragDist) ->
+    mnesia:change_table_frag(Tab, {add_frag, FragDist}).
 
 del_frag(Tab) ->
     mnesia:change_table_frag(Tab, del_frag).
@@ -134,21 +146,52 @@ init() ->
     code:load_binary(Mod, ?EVER_DB2 ++ ".erl", Code),
     ok.
 
+set_tmp_method() ->
+    {Mod,Code} = dynamic_compile:from_string(db_tmp_src()),
+    code:load_binary(Mod, ?EVER_DB2 ++ ".erl", Code),
+    ok.
+set_method() ->
+    {Mod,Code} = dynamic_compile:from_string(db_src()),
+    code:load_binary(Mod, ?EVER_DB2 ++ ".erl", Code),
+    ok.
+
+db_tmp_src() ->
+    "-module(" ++ ?EVER_DB2 ++ ")." ++
+    "-compile(export_all)." ++
+    "dirty_read(Tab, Key) -> 
+        case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
+            Tab ->
+                Read = fun(T, K) -> mnesia:dirty_read(T, K) end,
+                mnesia:activity(async_dirty, Read, [Tab, Key], mnesia_frag);
+            _ ->
+                mnesia:dirty_read(Tab, Key)
+        end." ++
+    "dirty_write(Tab, Record) ->
+        case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
+            Tab ->
+                Write = fun(T, R) -> mnesia:dirty_write(T, R) end,
+                mnesia:activity(sync_dirty, Write, [Tab, Record], mnesia_frag);
+            _ ->
+                mnesia:dirty_write(Tab, Record)
+        end."
+    .
+
+
 db_src() ->
     SchemaList = ets:tab2list(schema),
     FragTab = lists:foldl(fun({schema, Name, List}, Acc)->
-                                  case proplists:get_value(frag_properties, List) of
-                                      undefined ->
-                                          Acc;
-                                      Properties ->
-                                          case proplists:get_value(base_table, Properties) of
-                                              Name ->
-                                                  Acc ++ "," ++ atom_to_list(Name);
-                                              _ ->
-                                                  Acc;
-                                          end
-                                  end
-                          end, "", SchemaList),
+                case proplists:get_value(frag_properties, List) of
+                    undefined ->
+                        Acc;
+                    Properties ->
+                        case proplists:get_value(base_table, Properties) of
+                            Name ->
+                                Acc ++ "," ++ atom_to_list(Name);
+                            _ ->
+                                Acc
+                    end
+            end
+    end, "", SchemaList),
     "-module(" ++ ?EVER_DB2 ++ ")." ++
     "-compile(export_all)." ++
     "dirty_read(Tab, Key) -> 
@@ -169,7 +212,16 @@ db_src() ->
          end."
     .
 
+do_frag(Tab) ->
+    set_tmp_method(),
+    case proplists:get_value(base_table, mnesia:table_info(Tab, frag_properties)) of
+        undefined ->
+            activate_frag(Tab),
+            add_frag(Tab, frag_dist(Tab));  
+        BaseT when is_atom(BaseT) ->
+            add_frag(BaseT, frag_dist(BaseT))
+    end,
+    set_method(),
+    ok.
                  
                                  
-
-    
