@@ -2,3 +2,4 @@ deps
 ebin
 ever_database
 .DS_Store
+script/update_vps.sh
