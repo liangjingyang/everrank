@@ -383,7 +383,6 @@ add_inited(Inited, SnsId, Tab, FDTab, FWTab) ->
     FriendList = add_inited2(Inited, SnsId, Tab, FWTab, []),
     [#t_fd{friendList = FriendList2} = FDRec] = ever_db:dirty_read(FDTab, SnsId),
     FriendList3 = merge_fdl(FriendList2, FriendList),
-    io:format("add_inited, I:~w, id:~w, f:~w, f2:~w, f3:~w~n", [Inited, SnsId, FriendList, FriendList2, FriendList3]),
     ever_db:dirty_write(FDTab, FDRec#t_fd{friendList = FriendList3}),
     ok.
 

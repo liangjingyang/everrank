@@ -8,11 +8,11 @@
 sns_to_tab(SnsType) -> 
     sns_to_tab(SnsType, "").
 
-sns_to_tab(SnsType, Suffix) when is_integer(SnsType) ->
-    sns_to_tab(snstype_to_string(SnsType), Suffix);
 
+sns_to_tab(SnsType, Suffix) when is_list(SnsType) ->
+    list_to_atom(lists:concat([t_, SnsType, Suffix]));
 sns_to_tab(SnsType, Suffix) ->
-    list_to_atom(lists:concat([t_, SnsType, Suffix])).
+    sns_to_tab(snstype_to_string(SnsType), Suffix).
 
 sns_to_friend_tab(SnsType) ->
     sns_to_tab(SnsType, "_friend").
