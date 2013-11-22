@@ -1,15 +1,15 @@
 -include("src/everlib/include/ever_log.hrl").
 
 
--record(t, {snsId, data = <<>>}).
+-record(t, {snsId, data = <<"">>, time = 0}).
 -record(t_fd, {snsId, friendList = []}).
--record(t_fdl, {snsId, data = <<>>, update = false}).
+-record(t_fdl, {snsId, data = <<>>, time = 0}).
 -record(t_fw, {snsId, followList = []}).
 -record(t_rn, {snsId, relationList = []}).
 
 -define(PROTOCOL_INIT, <<"init">>).
 -define(PROTOCOL_UPDATE_FRIEND, <<"update_friend">>).
--define(PROTOCOL_UPDATE_USERDATA, <<"update_data">>).
+-define(PROTOCOL_SET_USERDATA, <<"update_data">>).
 -define(PROTOCOL_GET_USERDATA, <<"get_data">>).
 -define(PROTOCOL_GET_FRIEND_USERDATA, <<"get_friend_data">>).
 
@@ -19,6 +19,7 @@
 -define(FIELD_USERDATA, <<"data">>).
 -define(FIELD_CMD, <<"cmd">>).
 -define(FIELD_RES, <<"res">>).
+-define(FIELD_TIME, <<"time">>).
 
 -define(SNSTYPE_SINAWEIBO, <<"sw">>).
 -define(SNSTYPE_TENCENTWEIBO, <<"tw">>).

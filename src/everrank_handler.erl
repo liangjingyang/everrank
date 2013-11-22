@@ -86,7 +86,7 @@ do_handle_protocol([{?PROTOCOL_INIT, Data}], Req, State) ->
 do_handle_protocol([{?PROTOCOL_UPDATE_FRIEND, Data}], Req, State) ->
     do_handle_update_friend(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_UPDATE_USERDATA, Data}], Req, State) ->
-    do_handle_update_userdata(Data, Req, State);
+    do_handle_set_userdata(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_GET_USERDATA, Data}], Req, State) ->
     do_handle_get_userdata(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_GET_FRIEND_USERDATA, Data}], Req, State) ->
@@ -98,22 +98,22 @@ do_handle_protocol(_Protocol, Req, _State) ->
 do_handle_init(Data, Req, _State) ->
     [SnsType, SnsId, FSnsIdList] = check_init_field(Data, Req),
     Tab = everrank_lib:sns_to_tab(SnsType),
-    FDTab = everrank_lib:sns_to_friend_tab(SnsType),
-    FWTab = everrank_lib:sns_to_follow_tab(SnsType),
-    RNTab = everrank_lib:sns_to_relation_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
+            FDTab = everrank_lib:sns_to_friend_tab(SnsType),
+            FWTab = everrank_lib:sns_to_follow_tab(SnsType),
+            RNTab = everrank_lib:sns_to_relation_tab(SnsType),
             ever_db:dirty_write(Tab, #t{snsId = SnsId}),
             ever_db:dirty_write(FDTab, #t_fd{snsId = SnsId}),
-            ever_db:dirty_write(FWTab, #t_fw{snsId = SnsId});
+            ever_db:dirty_write(FWTab, #t_fw{snsId = SnsId}),
+            [Inited, NotInited] = split_friends(FSnsIdList, Tab, [], []),
+            add_inited(Inited, SnsId, Tab, FDTab, FWTab),
+            add_notinited(NotInited, SnsId, RNTab),
+            add_relation(SnsId, FDTab, FWTab, RNTab),
+            reply(?RES_SUCC, Req);
         _ ->
-            ignore
-    end,
-    [Inited, NotInited] = split_friends(FSnsIdList, Tab, [], []),
-    add_inited(Inited, SnsId, Tab, FDTab, FWTab),
-    add_notinited(NotInited, SnsId, RNTab),
-    add_relation(SnsId, FDTab, FWTab, RNTab),
-    reply(?RES_SUCC, Req).
+            {protocol, ?PROTOCOL_INIT, has_inited}
+    end.
 
     
 check_init_field(Data, Req) ->
@@ -127,7 +127,7 @@ do_handle_update_friend(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            ignore;
+            {protocol, ?PROTOCOL_UPDATE_FRIEND, not_init};
         _ ->
             FDTab = everrank_lib:sns_to_friend_tab(SnsType),
             FWTab = everrank_lib:sns_to_follow_tab(SnsType),
@@ -153,24 +153,25 @@ check_update_friend_field(Data, Req) ->
     FSnsIdList = check_field_friendlist(Data, Req),
     [SnsType, SnsId, Cmd, FSnsIdList].
 
-do_handle_update_userdata(Data, Req, _State) ->
-    [SnsType, SnsId, UserData] = check_update_userdata(Data, Req),
+do_handle_set_userdata(Data, Req, _State) ->
+    [SnsType, SnsId, UserData] = check_set_userdata(Data, Req),
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            ignore;
+            {protocol, ?PROTOCOL_UPDATE_USERDATA, not_init};
         [#t{data = OldUserData} = Rec] ->
             case is_replace_userdata(OldUserData, UserData) of
                 false ->
-                    ignore;
+                    reply(?RES_SUCC, Req);
                 true ->
-                    ever_db:dirty_write(Tab, Rec#t{data = UserData}),
-                    spawn(fun() -> update_follow(UserData, SnsId, SnsType) end),
+                    Time = ever_time:now(),
+                    ever_db:dirty_write(Tab, Rec#t{data = UserData, time = Time}),
+                    spawn(fun() -> update_follow(Rec, SnsId, SnsType) end),
                     reply(?RES_SUCC, Req)
             end
     end.
 
-check_update_userdata(Data, Req) ->
+check_set_userdata(Data, Req) ->
     SnsType = check_field_snstype(Data, Req),
     SnsId = check_field_snsid(Data, Req),
     UserData = check_field_userdata(Data, Req),
@@ -181,9 +182,9 @@ do_handle_get_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            ignore;
-        [#t{data = UserData}] ->
-            Res = jsx:encode([{SnsId, UserData}]),
+            {protocol, ?PROTOCOL_GET_USERDATA, not_init};
+        [#t{data = UserData, time = Time}] ->
+            Res = jsx:encode([{?FIELD_SNSID, SnsId}, {?FIELD_USERDATA, UserData}, {?FIELD_TIME, Time}]),
             reply(Res, Req)
     end.
 
@@ -197,7 +198,7 @@ do_handle_get_friend_userdata(Data, Req, _State) ->
     FDTab = everrank_lib:sns_to_friend_tab(SnsType),
     case ever_db:dirty_read(FDTab, SnsId) of
         [] ->
-            ignore;
+            {protocol, ?PROTOCOL_GET_FRIEND_USERDATA, not_init};
         [#t_fd{friendList = FDList} = FDRec] ->
             case Cmd of
                 ?CMD_ALL ->
@@ -231,19 +232,19 @@ fdl_to_json(FDList) ->
     TermList = fdl_to_json2(FDList, []),
     jsx:encode(TermList).
 fdl_to_json2([FDL|List], TermList) ->
-    #t_fdl{snsId = SnsId, data = UserData} = FDL,
-    fdl_to_json2(List, [{SnsId, UserData}|TermList]);
+    #t_fdl{snsId = SnsId, data = UserData, time = Time} = FDL,
+    fdl_to_json2(List, [[{?FIELD_SNSID, SnsId}, {?FIELD_USERDATA, UserData}, {?FIELD_TIME, Time}]|TermList]);
 fdl_to_json2([], TermList) ->
     TermList.
 
-update_follow(UserData, SnsId, SnsType) ->
+update_follow(Rec, SnsId, SnsType) ->
     FWTab = everrank_lib:sns_to_follow_tab(SnsType),
     case ever_db:dirty_read(FWTab, SnsId) of
         [] ->
             ignore;
         [#t_fw{followList = FSnsIdList}] ->
             FDTab = everrank_lib:sns_to_friend_tab(SnsType),
-            FDLRec = #t_fdl{snsId = SnsId, data = UserData, update = true},
+            FDLRec = #t_fdl{snsId = SnsId, data = Rec#t.data, time = Rec#t.time},
             update_follow2(FSnsIdList, FDLRec, SnsId, FDTab)
     end.
 update_follow2([FSnsId|List], FDLRec, MSnsId, FDTab) ->
