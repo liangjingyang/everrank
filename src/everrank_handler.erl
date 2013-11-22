@@ -198,35 +198,26 @@ check_get_userdata(Data, Req) ->
     [SnsType, SnsId].
 
 do_handle_get_friend_userdata(Data, Req, _State) ->
-    [SnsType, SnsId, Cmd] = check_get_friend_userdata(Data, Req),
+    [SnsType, SnsId, Time] = check_get_friend_userdata(Data, Req),
     FDTab = everrank_lib:sns_to_friend_tab(SnsType),
     case ever_db:dirty_read(FDTab, SnsId) of
         [] ->
             {protocol, ?PROTOCOL_GET_FRIEND_USERDATA, not_init};
-        [#t_fd{friendList = FDList} = FDRec] ->
-            case Cmd of
-                ?CMD_ALL ->
+        [#t_fd{friendList = FDList}] ->
+            case Time of
+                0 ->
                     Res = fdl_to_json(FDList);
-                ?CMD_NEW ->
-                    Res = fdl_to_json([FDL||FDL<-FDList, FDL#t_fdl.update =:= true])
+                _ ->
+                    Res = fdl_to_json([FDL||FDL<-FDList, FDL#t_fdl.time >= Time])
             end,
-            FDList2 = lists:foldl(fun(FDL, Acc) -> 
-                        case FDL#t_fdl.update of
-                            true ->
-                                [FDL#t_fdl{update = false}|Acc];
-                            false ->
-                                [FDL|Acc]
-                        end
-                end, [], FDList),
-            ever_db:dirty_write(FDTab, FDRec#t_fd{friendList = FDList2}),
             reply(Res, Req)
     end.
 
 check_get_friend_userdata(Data, Req) ->
     SnsType = check_field_snstype(Data, Req),
     SnsId = check_field_snsid(Data, Req),
-    Cmd = check_field_cmd(Data, Req, ?CMD_LIST_GET_FRIEND_DATA),
-    [SnsType, SnsId, Cmd].
+    Time = check_field_time(Data, Req),
+    [SnsType, SnsId, Time].
 
 do_handle_set_private_userdata(Data, Req, _State) ->
     [SnsType, SnsId, UserData] = check_set_private_userdata(Data, Req),
@@ -238,7 +229,6 @@ do_handle_set_private_userdata(Data, Req, _State) ->
             Time = ever_time:now(),
             ever_db:dirty_write(Tab, Rec#t{privateData = UserData, privateTime = Time}),
             reply(?RES_SUCC, Req)
-            end
     end.
 
 check_set_private_userdata(Data, Req) ->
@@ -360,7 +350,8 @@ add_relation(SnsId, FDTab, FWTab, RNTab) ->
         [] ->
             ignore;
         [#t_rn{relationList = RelationList}] ->
-            add_relation2(RelationList, SnsId, FDTab),
+            Time = ever_time:now(),
+            add_relation2(RelationList, SnsId, FDTab, Time),
             case ever_db:dirty_read(FWTab, SnsId) of
                 [] ->
                     ever_db:dirty_write(FWTab, #t_fw{snsId = SnsId, followList = RelationList});
@@ -371,7 +362,7 @@ add_relation(SnsId, FDTab, FWTab, RNTab) ->
             ever_db:dirty_delete(RNTab, SnsId)
     end,
     ok.
-add_relation2([RSnsId|RelationList], MSnsId, FDTab) ->
+add_relation2([RSnsId|RelationList], MSnsId, FDTab, Time) ->
     %%TODO:transaction
     case ever_db:dirty_read(FDTab, RSnsId) of
         [] ->
@@ -381,13 +372,13 @@ add_relation2([RSnsId|RelationList], MSnsId, FDTab) ->
                 true ->
                     ignore;
                 false ->
-                    Friend = #t_fdl{snsId = MSnsId, update = true},
+                    Friend = #t_fdl{snsId = MSnsId, time = Time},
                     FDRec2 = FDRec#t_fd{friendList = [Friend|FriendList]},
                     ever_db:dirty_write(FDTab, FDRec2)
             end
     end,
-    add_relation2(RelationList, MSnsId, FDTab);
-add_relation2([], _MSnsId, _FDTab) ->
+    add_relation2(RelationList, MSnsId, FDTab, Time);
+add_relation2([], _MSnsId, _FDTab, _Time) ->
     ok.
 
 add_notinited([FSnsId|NotInited], MSnsId, RNTab) ->
@@ -414,16 +405,17 @@ merge_fdl([], List) ->
     List.
 
 add_inited(Inited, SnsId, Tab, FDTab, FWTab) ->
-    FriendList = add_inited2(Inited, SnsId, Tab, FWTab, []),
+    Time = ever_time:now(),
+    FriendList = add_inited2(Inited, SnsId, Tab, FWTab, Time, []),
     [#t_fd{friendList = FriendList2} = FDRec] = ever_db:dirty_read(FDTab, SnsId),
     FriendList3 = merge_fdl(FriendList2, FriendList),
     ever_db:dirty_write(FDTab, FDRec#t_fd{friendList = FriendList3}),
     ok.
 
-add_inited2([FSnsId|Inited], MSnsId, Tab, FWTab, FriendList) ->
+add_inited2([FSnsId|Inited], MSnsId, Tab, FWTab, Time, FriendList) ->
     case ever_db:dirty_read(Tab, FSnsId) of
         [#t{data = Data}] ->
-            Friend = #t_fdl{snsId = FSnsId, data = Data, update = true},
+            Friend = #t_fdl{snsId = FSnsId, data = Data, time = Time},
             FriendList2 = [Friend|FriendList];
         _ ->
             FriendList2 = FriendList
@@ -436,8 +428,8 @@ add_inited2([FSnsId|Inited], MSnsId, Tab, FWTab, FriendList) ->
         _ ->
             ignore
     end,
-    add_inited2(Inited, MSnsId, Tab, FWTab, FriendList2);
-add_inited2([], _MSnsId, _Tab, _FWTab, FriendList) ->
+    add_inited2(Inited, MSnsId, Tab, FWTab, Time, FriendList2);
+add_inited2([], _MSnsId, _Tab, _FWTab, _Time, FriendList) ->
     FriendList.
 
 split_friends([SnsId|Friends], Tab, Inited, NotInited) ->
@@ -505,3 +497,11 @@ check_field_snstype(Data, Req) ->
             end
     end,
     SnsType.
+check_field_time(Data, _Req) ->
+    case proplists:get_value(?FIELD_TIME, Data) of
+        Time when is_integer(Time) ->
+            ok;
+        _ ->
+            Time = 0
+    end,
+    Time.

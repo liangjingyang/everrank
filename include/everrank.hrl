@@ -30,10 +30,7 @@
 
 -define(CMD_ADD, <<"add">>).
 -define(CMD_DEL, <<"del">>).
--define(CMD_ALL, <<"all">>).
--define(CMD_NEW, <<"new">>).
 -define(CMD_LIST_UPDATE_FRIEND, [?CMD_ADD, ?CMD_DEL]).
--define(CMD_LIST_GET_FRIEND_DATA, [?CMD_ALL, ?CMD_NEW]).
 
 -define(RES_SUCC, <<"succ">>).
 -define(RES_ERROR_SYSTEM, <<"error system">>).

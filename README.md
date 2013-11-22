@@ -26,6 +26,7 @@
 - "fdl"                     好友唯一id的列表
 - "data"                    用户数据
 - "cmd"                     操作命令
+- "time"                    秒为单位的时间戳
 
 ## 社交平台 ##
 - "sw"                      新浪微博
@@ -35,8 +36,6 @@
 ## cmd ##
 - "add"                     增加（update_friend协议里用到）
 - "del"                     删除（update_friend协议里用到）
-- "all"                     全部的好友公开数据（get_friend_data协议里用到）
-- "new"                     好友新的公开数据（get_friend_data协议里用到）
 
 ## 返回结果 ##
 - "succ"
@@ -105,7 +104,7 @@
         "id" :1001 
     }
 }
-返回: {"id":1001, "data":data}
+返回: {"id":1001, "data":data, "time":1385088233}
 
 ### get_friend_userdata ###
 
@@ -115,11 +114,11 @@
     {
         "type" : "sw",
         "id" : 1001,
-        "cmd": "all"
+        "time" : 0
     }
 }
 
-返回: [{"id":1002, "data":data}, {"id":1003, "data":data}]
+返回: [{"id":1002, "data":data, "time":1385088233}, {"id":1003, "data":data, "time":1385088233}]
 
 ### set_private_data ###
 
@@ -145,5 +144,5 @@
         "id" : 1001
     }
 }
-返回: {"id":1001, "data":data}
+返回: {"id":1001, "data":data, "time":1385088233}
 
