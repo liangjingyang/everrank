@@ -1,7 +1,7 @@
 -include("src/everlib/include/ever_log.hrl").
 
 
--record(t, {snsId, data = <<"">>, time = 0}).
+-record(t, {snsId, privateData = <<"">>, data = <<"">>, time = 0}).
 -record(t_fd, {snsId, friendList = []}).
 -record(t_fdl, {snsId, data = <<>>, time = 0}).
 -record(t_fw, {snsId, followList = []}).
