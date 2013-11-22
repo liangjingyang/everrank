@@ -85,12 +85,16 @@ do_handle_protocol([{?PROTOCOL_INIT, Data}], Req, State) ->
     do_handle_init(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_UPDATE_FRIEND, Data}], Req, State) ->
     do_handle_update_friend(Data, Req, State);
-do_handle_protocol([{?PROTOCOL_UPDATE_USERDATA, Data}], Req, State) ->
+do_handle_protocol([{?PROTOCOL_SET_USERDATA, Data}], Req, State) ->
     do_handle_set_userdata(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_GET_USERDATA, Data}], Req, State) ->
     do_handle_get_userdata(Data, Req, State);
 do_handle_protocol([{?PROTOCOL_GET_FRIEND_USERDATA, Data}], Req, State) ->
     do_handle_get_friend_userdata(Data, Req, State);
+do_handle_protocol([{?PROTOCOL_SET_PRIVATE_USERDATA, Data}], Req, State) ->
+    do_handle_set_private_userdata(Data, Req, State);
+do_handle_protocol([{?PROTOCOL_GET_PRIVATE_USERDATA, Data}], Req, State) ->
+    do_handle_get_private_userdata(Data, Req, State);
 do_handle_protocol(_Protocol, Req, _State) ->
     io:format("handle protocol error, data:~p~n", [_Protocol]),
     abort(Req, ?RES_ERROR_PROTOCOL).
@@ -158,7 +162,7 @@ do_handle_set_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_UPDATE_USERDATA, not_init};
+            {protocol, ?PROTOCOL_SET_USERDATA, not_init};
         [#t{data = OldUserData} = Rec] ->
             case is_replace_userdata(OldUserData, UserData) of
                 false ->
@@ -224,6 +228,35 @@ check_get_friend_userdata(Data, Req) ->
     Cmd = check_field_cmd(Data, Req, ?CMD_LIST_GET_FRIEND_DATA),
     [SnsType, SnsId, Cmd].
 
+do_handle_set_private_userdata(Data, Req, _State) ->
+    [SnsType, SnsId, UserData] = check_set_private_userdata(Data, Req),
+    Tab = everrank_lib:sns_to_tab(SnsType),
+    case ever_db:dirty_read(Tab, SnsId) of
+        [] ->
+            {protocol, ?PROTOCOL_SET_PRIVATE_USERDATA, not_init};
+        [#t{} = Rec] ->
+            Time = ever_time:now(),
+            ever_db:dirty_write(Tab, Rec#t{privateData = UserData, privateTime = Time}),
+            reply(?RES_SUCC, Req)
+            end
+    end.
+
+check_set_private_userdata(Data, Req) ->
+    check_set_userdata(Data, Req).
+
+do_handle_get_private_userdata(Data, Req, _State) ->
+    [SnsType, SnsId] = check_get_private_userdata(Data, Req),
+    Tab = everrank_lib:sns_to_tab(SnsType),
+    case ever_db:dirty_read(Tab, SnsId) of
+        [] ->
+            {protocol, ?PROTOCOL_GET_PRIVATE_USERDATA, not_init};
+        [#t{privateData = UserData, privateTime = Time}] ->
+            Res = jsx:encode([{?FIELD_SNSID, SnsId}, {?FIELD_USERDATA, UserData}, {?FIELD_TIME, Time}]),
+            reply(Res, Req)
+    end.
+
+check_get_private_userdata(Data, Req) ->
+    check_get_userdata(Data, Req).
 %%===================================================================
 is_replace_userdata(_Old, _New) ->
     true.

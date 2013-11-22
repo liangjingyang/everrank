@@ -1,7 +1,7 @@
 -include("src/everlib/include/ever_log.hrl").
 
 
--record(t, {snsId, privateData = <<"">>, data = <<"">>, time = 0}).
+-record(t, {snsId, privateData = <<"">>, privateTime = 0, data = <<"">>, time = 0}).
 -record(t_fd, {snsId, friendList = []}).
 -record(t_fdl, {snsId, data = <<>>, time = 0}).
 -record(t_fw, {snsId, followList = []}).
@@ -12,6 +12,8 @@
 -define(PROTOCOL_SET_USERDATA, <<"update_data">>).
 -define(PROTOCOL_GET_USERDATA, <<"get_data">>).
 -define(PROTOCOL_GET_FRIEND_USERDATA, <<"get_friend_data">>).
+-define(PROTOCOL_SET_PRIVATE_USERDATA, <<"set_private_data">>).
+-define(PROTOCOL_GET_PRIVATE_USERDATA, <<"get_private_data">>).
 
 -define(FIELD_SNSTYPE, <<"type">>).
 -define(FIELD_SNSID, <<"id">>).
