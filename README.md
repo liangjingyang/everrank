@@ -103,6 +103,7 @@ http协议，post方法，json格式。
 
 #### get_friend_userdata ###
 请求:          
+
     {    
         "get_friend_data" :    
         {        
@@ -115,6 +116,7 @@ http协议，post方法，json格式。
 
 #### set_private_data ###
 请求:         
+
     {    
         "set_private_data" :    
         {    
