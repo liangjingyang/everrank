@@ -59,11 +59,12 @@ http协议，post方法，json格式。
     {
         "init" : 
         {
-		"type" : "sw",
-		"id" : 1001,
-		"fdl" : [1002,1003]
+            "type" : "sw",
+            "id" : 1001,
+            "fdl" : [1002,1003]
         }
     }
+
 返回: "succ"
 
 #### update_friend ###
@@ -72,12 +73,13 @@ http协议，post方法，json格式。
     {  
         "update_friend :  
         {   
-		"type" : "sw",    
-		"id" : 1001,    
-		"cmd" : "add",    
-		"fdl" : [1004, 1005]    
+            "type" : "sw",    
+            "id" : 1001,    
+            "cmd" : "add",    
+            "fdl" : [1004, 1005]    
         }    
     }    
+
 返回: "succ"     
 
 #### set_data ###
@@ -86,11 +88,12 @@ http协议，post方法，json格式。
     {    
         "set_data" :    
         {    
-		"type" : "sw",    
-		"id" : 1001,    
-		"data" : data     
+            "type" : "sw",    
+            "id" : 1001,    
+            "data" : data     
         }    
     }    
+
 返回: "succ"    
 
 #### get_data ###
@@ -99,11 +102,18 @@ http协议，post方法，json格式。
     {    
         "get_data" :    
         {    
-		"type" : "sw",    
-		"id" :1001     
+            "type" : "sw",    
+            "id" :1001     
         }    
     }    
-返回: {"id":1001, "data":data, "time":1385088233}    
+
+返回:       
+
+    {
+        "id":1001, 
+        "data":data, 
+        "time":1385088233
+    }    
 
 #### get_friend_userdata ###
 请求:          
@@ -111,12 +121,26 @@ http协议，post方法，json格式。
     {    
         "get_friend_data" :    
         {        
-		"type" : "sw",    
-		"id" : 1001,    
-		"time" : 0    
+            "type" : "sw",    
+            "id" : 1001,    
+            "time" : 0    
         }    
     }    
-返回: [{"id":1002, "data":data, "time":1385088233}, {"id":1003, "data":data, "time":1385088233}]    
+
+返回:       
+
+    [
+        {
+            "id":1002, 
+            "data":data,
+            "time":1385088233
+        }, 
+        {
+            "id":1003, 
+            "data":data, 
+            "time":1385088233
+        }
+    ]    
 
 #### set_private_data ###
 请求:         
@@ -124,12 +148,13 @@ http协议，post方法，json格式。
     {    
         "set_private_data" :    
         {    
-		"type" : "sw",    
-		"id" : 1001,    
-		"data" : data    
+            "type" : "sw",    
+            "id" : 1001,    
+            "data" : data    
         }    
     }    
-返回: succ    
+
+返回: "succ"
 
 #### get_private_data ###
 请求:         
@@ -137,9 +162,16 @@ http协议，post方法，json格式。
     {    
         "get_private_data" :    
         {    
-		"type" : "sw",    
-		"id" : 1001    
+            "type" : "sw",    
+            "id" : 1001    
         }    
     }    
-返回: {"id":1001, "data":data, "time":1385088233}    
+
+返回:       
+
+    {
+        "id":1001, 
+        "data":data, 
+        "time":1385088233
+    }    
 
