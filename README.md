@@ -2,13 +2,13 @@
 
 ### 概述 ##
 
-为手游提供好友积分排行等社交交互服务和存档服务。单节点版本。	  
-虽然叫rank server但并没有去做排序的工作，而是通过社交平台开放的好友关系链，构建游戏的社交关系，在好友之间分享数据，例如积分。有了数据，客户端就可轻松排序。	
+为手游提供好友积分排行等社交交互服务和存档服务。单节点版本。      
+虽然叫rank server但并没有去做排序的工作，而是通过社交平台开放的好友关系链，构建游戏的社交关系，在好友之间分享数据，例如积分。有了数据，客户端就可轻松排序。    
 
 公开数据是指好友之间可以相互访问的数据。  
 私有数据是指只能玩家自己访问的数据。  
 
-http协议，post方法，json格式。	
+http协议，post方法，json格式。    
 
 ### 协议 ##
 - "init"                    初始化一个用户
@@ -54,85 +54,85 @@ http协议，post方法，json格式。
 新浪微博为例
 
 #### init ###
-请求: 
-	{
-	    "init" : 
-	    {
-		"type" : "sw",
-		"id" : 1001,
-		"fdl" : [1002,1003]
-	    }
-	}
+请求:         
+    {
+        "init" : 
+        {
+        "type" : "sw",
+        "id" : 1001,
+        "fdl" : [1002,1003]
+        }
+    }
 返回: "succ"
 
 #### update_friend ###
-请求: 
-	{  
-	    "update_friend :  
-	    {   
-		"type" : "sw",    
-		"id" : 1001,	
-		"cmd" : "add",	
-		"fdl" : [1004, 1005]	
-	    }	
-	}	
-返回: "succ" 	
+请求:         
+    {  
+        "update_friend :  
+        {   
+        "type" : "sw",    
+        "id" : 1001,    
+        "cmd" : "add",    
+        "fdl" : [1004, 1005]    
+        }    
+    }    
+返回: "succ"     
 
 #### set_data ###
-请求:	
-	{	
-	    "set_data" :	
-	    {	
-		"type" : "sw",	
-		"id" : 1001,	
-		"data" : data 	
-	    }	
-	}	
-返回: "succ"	
+请求:        
+    {    
+        "set_data" :    
+        {    
+        "type" : "sw",    
+        "id" : 1001,    
+        "data" : data     
+        }    
+    }    
+返回: "succ"    
 
 #### get_data ###
-请求:	
-	{	
-	    "get_data" :	
-	    {	
-		"type" : "sw",	
-		"id" :1001 	
-	    }	
-	}	
-返回: {"id":1001, "data":data, "time":1385088233}	
+请求:        
+    {    
+        "get_data" :    
+        {    
+        "type" : "sw",    
+        "id" :1001     
+        }    
+    }    
+返回: {"id":1001, "data":data, "time":1385088233}    
 
 #### get_friend_userdata ###
-请求:  	
-	{	
-	    "get_friend_data" :	
-	    {		
-		"type" : "sw",	
-		"id" : 1001,	
-		"time" : 0	
-	    }	
-	}	
-返回: [{"id":1002, "data":data, "time":1385088233}, {"id":1003, "data":data, "time":1385088233}]	
+请求:          
+    {    
+        "get_friend_data" :    
+        {        
+        "type" : "sw",    
+        "id" : 1001,    
+        "time" : 0    
+        }    
+    }    
+返回: [{"id":1002, "data":data, "time":1385088233}, {"id":1003, "data":data, "time":1385088233}]    
 
 #### set_private_data ###
-请求: 	
-	{	
-	    "set_private_data" :	
-	    {	
-		"type" : "sw",	
-		"id" : 1001,	
-		"data" : data	
-	    }	
-	}	
-返回: succ	
+请求:         
+    {    
+        "set_private_data" :    
+        {    
+        "type" : "sw",    
+        "id" : 1001,    
+        "data" : data    
+        }    
+    }    
+返回: succ    
 
 #### get_private_data ###
-请求: 	
-	{	
-	    "get_private_data" :	
-	    {	
-		"type" : "sw",	
-		"id" : 1001	
-	    }	
-	}	
-返回: {"id":1001, "data":data, "time":1385088233}	
+请求:         
+    {    
+        "get_private_data" :    
+        {    
+        "type" : "sw",    
+        "id" : 1001    
+        }    
+    }    
+返回: {"id":1001, "data":data, "time":1385088233}    
 
