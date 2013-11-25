@@ -55,84 +55,84 @@ http协议，post方法，json格式。
 
 #### init ###
 请求: 
-{
-    "init" : 
-    {
-        "type" : "sw",
-        "id" : 1001,
-        "fdl" : [1002,1003]
-    }
-}
+	{
+	    "init" : 
+	    {
+		"type" : "sw",
+		"id" : 1001,
+		"fdl" : [1002,1003]
+	    }
+	}
 返回: "succ"
 
 #### update_friend ###
 请求: 
-{  
-    "update_friend :  
-    {   
-        "type" : "sw",    
-        "id" : 1001,	
-        "cmd" : "add",	
-        "fdl" : [1004, 1005]	
-    }	
-}	
+	{  
+	    "update_friend :  
+	    {   
+		"type" : "sw",    
+		"id" : 1001,	
+		"cmd" : "add",	
+		"fdl" : [1004, 1005]	
+	    }	
+	}	
 返回: "succ" 	
 
 #### set_data ###
 请求:	
-{	
-    "set_data" :	
-    {	
-        "type" : "sw",	
-        "id" : 1001,	
-        "data" : data 	
-    }	
-}	
+	{	
+	    "set_data" :	
+	    {	
+		"type" : "sw",	
+		"id" : 1001,	
+		"data" : data 	
+	    }	
+	}	
 返回: "succ"	
 
 #### get_data ###
 请求:	
-{	
-    "get_data" :	
-    {	
-        "type" : "sw",	
-        "id" :1001 	
-    }	
-}	
+	{	
+	    "get_data" :	
+	    {	
+		"type" : "sw",	
+		"id" :1001 	
+	    }	
+	}	
 返回: {"id":1001, "data":data, "time":1385088233}	
 
 #### get_friend_userdata ###
 请求:  	
-{	
-    "get_friend_data" :	
-    {		
-        "type" : "sw",	
-        "id" : 1001,	
-        "time" : 0	
-    }	
-}	
+	{	
+	    "get_friend_data" :	
+	    {		
+		"type" : "sw",	
+		"id" : 1001,	
+		"time" : 0	
+	    }	
+	}	
 返回: [{"id":1002, "data":data, "time":1385088233}, {"id":1003, "data":data, "time":1385088233}]	
 
 #### set_private_data ###
 请求: 	
-{	
-    "set_private_data" :	
-    {	
-        "type" : "sw",	
-        "id" : 1001,	
-        "data" : data	
-    }	
-}	
+	{	
+	    "set_private_data" :	
+	    {	
+		"type" : "sw",	
+		"id" : 1001,	
+		"data" : data	
+	    }	
+	}	
 返回: succ	
 
 #### get_private_data ###
 请求: 	
-{	
-    "get_private_data" :	
-    {	
-        "type" : "sw",	
-        "id" : 1001	
-    }	
-}	
+	{	
+	    "get_private_data" :	
+	    {	
+		"type" : "sw",	
+		"id" : 1001	
+	    }	
+	}	
 返回: {"id":1001, "data":data, "time":1385088233}	
 
