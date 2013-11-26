@@ -169,8 +169,9 @@ do_handle_set_userdata(Data, Req, _State) ->
                     reply(?RES_SUCC, Req);
                 true ->
                     Time = ever_time:now(),
-                    ever_db:dirty_write(Tab, Rec#t{data = UserData, time = Time}),
-                    spawn(fun() -> update_follow(Rec, SnsId, SnsType) end),
+                    Rec2 = Rec#t{data = UserData, time = Time},
+                    ever_db:dirty_write(Tab, Rec2),
+                    spawn(fun() -> update_follow(Rec2, SnsId, SnsType) end),
                     reply(?RES_SUCC, Req)
             end
     end.
