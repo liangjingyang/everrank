@@ -116,7 +116,7 @@ do_handle_init(Data, Req, _State) ->
             add_relation(SnsId, FDTab, FWTab, RNTab),
             reply(?RES_SUCC, Req);
         _ ->
-            {protocol, ?PROTOCOL_INIT, has_inited}
+            abort(Req, ?RES_ERROR_ALREADY_INITED)
     end.
 
     
@@ -131,7 +131,7 @@ do_handle_update_friend(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_UPDATE_FRIEND, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         _ ->
             FDTab = everrank_lib:sns_to_friend_tab(SnsType),
             FWTab = everrank_lib:sns_to_follow_tab(SnsType),
@@ -162,7 +162,7 @@ do_handle_set_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_SET_USERDATA, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         [#t{data = OldUserData} = Rec] ->
             case is_replace_userdata(OldUserData, UserData) of
                 false ->
@@ -187,7 +187,7 @@ do_handle_get_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_GET_USERDATA, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         [#t{data = UserData, time = Time}] ->
             Res = jsx:encode([{?FIELD_SNSID, SnsId}, {?FIELD_USERDATA, UserData}, {?FIELD_TIME, Time}]),
             reply(Res, Req)
@@ -203,7 +203,7 @@ do_handle_get_friend_userdata(Data, Req, _State) ->
     FDTab = everrank_lib:sns_to_friend_tab(SnsType),
     case ever_db:dirty_read(FDTab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_GET_FRIEND_USERDATA, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         [#t_fd{friendList = FDList}] ->
             case Time of
                 0 ->
@@ -225,7 +225,7 @@ do_handle_set_private_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_SET_PRIVATE_USERDATA, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         [#t{} = Rec] ->
             Time = ever_time:now(),
             ever_db:dirty_write(Tab, Rec#t{privateData = UserData, privateTime = Time}),
@@ -240,7 +240,7 @@ do_handle_get_private_userdata(Data, Req, _State) ->
     Tab = everrank_lib:sns_to_tab(SnsType),
     case ever_db:dirty_read(Tab, SnsId) of
         [] ->
-            {protocol, ?PROTOCOL_GET_PRIVATE_USERDATA, not_init};
+            abort(Req, ?RES_ERROR_NOT_INITED);
         [#t{privateData = UserData, privateTime = Time}] ->
             Res = jsx:encode([{?FIELD_SNSID, SnsId}, {?FIELD_USERDATA, UserData}, {?FIELD_TIME, Time}]),
             reply(Res, Req)

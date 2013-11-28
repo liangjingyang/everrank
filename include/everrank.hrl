@@ -41,4 +41,6 @@
 -define(RES_ERROR_FIELD, <<"error field">>).
 -define(RES_ERROR_SNSTYPE, <<"error type">>).
 -define(RES_ERROR_JSON, <<"error json">>).
+-define(RES_ERROR_ALREADY_INITED, <<"error already inited">>).
+-define(RES_ERROR_NOT_INITED, <<"error not inited">>).
 
