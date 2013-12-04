@@ -10,10 +10,10 @@
 
 ### 用法 ##
 
-环境要求，erlang otp + linux。
-git clone https://github.com/liangjingyang/everrank.git 
-在everrank目录下运行./rebar get-deps && ./rebar compile进行编译
-进入script目录，运行./start.sh
+环境要求，erlang otp + linux                    
+git clone https://github.com/liangjingyang/everrank.git                 
+在everrank目录下运行./rebar get-deps && ./rebar compile进行编译         
+进入script目录，运行./start.sh          
 
 ### 测试 ##
 以sina微博为例          
