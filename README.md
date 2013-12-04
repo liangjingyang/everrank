@@ -8,6 +8,10 @@
 公开数据是指开放给好友访问的数据（例如分数）。  
 私有数据是指只能玩家自己访问的数据（例如存档）。  
 
+项目依赖：              
+cowboy: https://github.com/extend/cowboy                        
+jsx: https://github.com/talentdeficit/jsx                       
+
 ### 用法 ##
 
 环境要求，erlang otp + linux                    
