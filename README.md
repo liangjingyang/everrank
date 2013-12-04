@@ -5,12 +5,34 @@
 为手游提供好友积分排行等社交交互服务和存档服务。单节点版本。      
 虽然叫rank server但并没有去做排序的工作，而是通过社交平台开放的好友关系链，构建游戏的社交关系，在好友之间分享数据，例如积分。有了数据，客户端就可轻松排序。    
 
-公开数据是指好友之间可以相互访问的数据。  
-私有数据是指只能玩家自己访问的数据。  
+公开数据是指开放给好友访问的数据（例如分数）。  
+私有数据是指只能玩家自己访问的数据（例如存档）。  
 
-http协议，post方法，json格式。    
+### 用法 ##
+
+环境要求，erlang otp + linux。
+git clone https://github.com/liangjingyang/everrank.git 
+在everrank目录下运行./rebar get-deps && ./rebar compile进行编译
+进入script目录，运行./start.sh
+
+### 测试 ##
+以sina微博为例
+
+初始化互为好友的两个用户：1001， 1002
+curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1001, \"fdl\":[1002]}}" http://localhost:8080
+curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1002, \"fdl\":[1001]}}" http://localhost:8080
+更新两个人的游戏分数：
+curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1001, \"data"\:8888}}" http://localhost:8080
+curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1002, \"data"\:9999}}" http://localhost:8080
+获取自己的分数：
+curl -i -d content="{\"get_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
+获取好友的分数：
+curl -i -d content="{\"get_friend_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
+
 
 ### 协议 ##
+http协议，post方法，json格式。    
+
 - "init"                    初始化一个用户
 - "update_friend"           更新用户的好友，支持增减两种操作
 - "set_data"                设置用户公开数据，可以是任意json结构
