@@ -16,18 +16,18 @@ git clone https://github.com/liangjingyang/everrank.git
 进入script目录，运行./start.sh
 
 ### 测试 ##
-以sina微博为例
+以sina微博为例          
 
-初始化互为好友的两个用户：1001， 1002
-curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1001, \"fdl\":[1002]}}" http://localhost:8080
-curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1002, \"fdl\":[1001]}}" http://localhost:8080
-更新两个人的游戏分数：
-curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1001, \"data"\:8888}}" http://localhost:8080
-curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1002, \"data"\:9999}}" http://localhost:8080
-获取自己的分数：
-curl -i -d content="{\"get_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
-获取好友的分数：
-curl -i -d content="{\"get_friend_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
+初始化互为好友的两个用户：1001， 1002           
+    curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1001, \"fdl\":[1002]}}" http://localhost:8080
+    curl -i -d content="{\"init\":{\"type\":\"sw\", \"id\":1002, \"fdl\":[1001]}}" http://localhost:8080
+更新两个人的游戏分数：          
+    curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1001, \"data"\:8888}}" http://localhost:8080
+    curl -i -d content="{\"update_data\"type\":\"sw\", \"id\":1002, \"data"\:9999}}" http://localhost:8080
+获取自己的分数：                
+    curl -i -d content="{\"get_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
+获取好友的分数：                
+    curl -i -d content="{\"get_friend_data\":{\"type\":\"sw\", \"id\":1001}}" http://localhost:8080
 
 
 ### 协议 ##
